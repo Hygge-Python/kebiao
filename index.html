@@ -1205,51 +1205,63 @@ function maybeSeed(){
 
 /* ============ 安装到手机（PWA） ============ */
 var deferredInstall = null;
+var installPromptSeen = false;
 function isStandalone(){
   return window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
 }
 function installDismissed(){
   try{ return localStorage.getItem('tt.installDismissed') === '1'; }catch(e){ return false; }
 }
-function showInstallBar(){
-  var bar = $('#installBar');
-  if(!bar) return;
-  if(isStandalone() || installDismissed()) return;      // 已经是 App 或用户已选择不再提示
-  var ua = navigator.userAgent || '';
-  var isIOS = /iPhone|iPad|iPod/i.test(ua);
-  $('#installText').innerHTML = isIOS
-    ? '<b>把课表装到桌面</b>Safari 底部分享按钮 →「添加到主屏幕」，就能全屏、离线用'
-    : '<b>把课表装成手机 App</b>桌面会有独立图标，全屏打开，断网也能用';
-  $('#btnInstall').textContent = isIOS ? '知道了' : '安装';
-  bar.classList.add('show');
+function isPhone(){ return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || ''); }
+function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent || ''); }
+/* 只有手机、或浏览器已经给出安装入口时才提示；已经在 App 里运行 / 用户已关过就不再显示 */
+function shouldShowInstall(){
+  if(isStandalone() || installDismissed()) return false;
+  return isPhone() || !!deferredInstall;
+}
+function renderInstallBar(){
+  if(!shouldShowInstall()){ hideInstallBar(); return; }
+  var txt, btn;
+  if(isIOS()){
+    txt = '<b>把课表装到桌面</b>Safari 底部分享按钮 →「添加到主屏幕」，装好就是全屏、离线可用';
+    btn = '知道了';
+  }else if(deferredInstall){
+    txt = '<b>把课表装成手机 App</b>桌面会有独立图标，点开全屏、没有地址栏，断网也能用';
+    btn = '安装';
+  }else{
+    txt = '<b>要装成真正的 App，不是网页书签</b>浏览器菜单 ⋮ →「<u>安装应用</u>」。' +
+          '若只有「添加到主屏幕」，装完点开还带地址栏的话，删掉桌面图标、改用「安装应用」重装一次';
+    btn = '知道了';
+  }
+  $('#installText').innerHTML = txt;
+  $('#btnInstall').textContent = btn;
+  $('#installBar').classList.add('show');
 }
 function hideInstallBar(){ var b = $('#installBar'); if(b) b.classList.remove('show'); }
 function initInstall(){
   window.addEventListener('beforeinstallprompt', function(e){
     e.preventDefault();
     deferredInstall = e;
-    showInstallBar();
+    installPromptSeen = true;
+    renderInstallBar();
   });
-  /* 已经以 App 方式运行就不显示 */
-  window.addEventListener('appinstalled', function(){ hideInstallBar(); toast('已装到桌面，从图标点开即可'); });
+  window.addEventListener('appinstalled', function(){ hideInstallBar(); toast('已装成 App，从桌面图标点开即可'); });
   $('#btnInstall').addEventListener('click', function(){
-    var ua = navigator.userAgent || '';
-    if(/iPhone|iPad|iPod/i.test(ua)){
-      toast('点 Safari 底部的分享按钮，再选「添加到主屏幕」');
-      return;
-    }
-    if(!deferredInstall){ toast('浏览器菜单里选「添加到主屏幕 / 安装应用」'); return; }
+    if(isIOS()){ toast('点 Safari 底部的分享按钮，再选「添加到主屏幕」'); return; }
+    if(!deferredInstall){ toast('浏览器菜单里选「安装应用」（不是「添加到主屏幕」）'); return; }
     deferredInstall.prompt();
     deferredInstall.userChoice.then(function(){
       deferredInstall = null;
-      hideInstallBar();
+      renderInstallBar();
     }).catch(function(){});
   });
   $('#btnInstallClose').addEventListener('click', function(){
     try{ localStorage.setItem('tt.installDismissed', '1'); }catch(e){}
     hideInstallBar();
   });
-  showInstallBar();
+  renderInstallBar();
+  /* 有的浏览器要过一会儿才给出安装入口，3.5 秒后按最新情况再渲染一次 */
+  setTimeout(renderInstallBar, 3500);
 }
 
 /* ============ 底部按钮：下滑自动隐藏，不遮挡课表 ============ */
