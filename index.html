@@ -319,7 +319,7 @@ header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.3px;flex:1}
 'use strict';
 
 /* ============ constants ============ */
-var STORAGE_KEY = 'tt.data.v2';
+var STORAGE_KEY = 'tt.data.v3';
 var VERSION = 1;
 var DAY_NAMES = ['周一','周二','周三','周四','周五','周六','周日'];
 var DAY_SHORT = ['一','二','三','四','五','六','日'];
@@ -333,14 +333,14 @@ var DEFAULT_SLOTS = [
   {label:'6',  start:'15:25', end:'16:10', group:'下午'},
   {label:'7',  start:'16:20', end:'17:05', group:'下午'},
   {label:'8',  start:'17:15', end:'18:00', group:'下午'},
-  /* 第 9 节本班不用，未列入；晚上 = 第10-12节 19:30-22:00 */
-  {label:'10', start:'19:30', end:'20:20', group:'晚'},
-  {label:'11', start:'20:20', end:'21:10', group:'晚'},
-  {label:'12', start:'21:10', end:'22:00', group:'晚'}
+  /* 第 9 节本班不用，未列入；晚上 = 第10-12节 19:30-22:05（每节 45 分钟） */
+  {label:'10', start:'19:30', end:'20:15', group:'晚'},
+  {label:'11', start:'20:25', end:'21:10', group:'晚'},
+  {label:'12', start:'21:20', end:'22:05', group:'晚'}
 ];
 
 /* ============ 预设课表（导入时写入；手机首次打开自动载入） ============ */
-var SEED_FLAG = 'tt.seed.v2';
+var SEED_FLAG = 'tt.seed.v3';
 var SEED_TITLE = '24智能产品1班课表';
 var SEED = {
   settings: {

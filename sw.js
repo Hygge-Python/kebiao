@@ -1,7 +1,7 @@
 /* 课程表 — 离线缓存（Service Worker）
    装到手机桌面后，断网也能照常打开课表。
    改了这里的版本号（CACHE）就会强制更新缓存。 */
-const CACHE = 'timetable-v5';
+const CACHE = 'timetable-v6';
 const ASSETS = [
   'index.html',
   'manifest.webmanifest',
