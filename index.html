@@ -39,6 +39,18 @@ header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.3px;flex:1}
   display:flex;align-items:center;justify-content:center;font-size:16px;color:#5B6478}
 .icon-btn:active{background:#EEF1FB}
 
+/* ---------- 安装到手机（PWA） ---------- */
+.install-bar{display:none;align-items:center;gap:10px;background:linear-gradient(135deg,#4A6CF7,#6E8BFF);
+  color:#fff;border-radius:14px;padding:11px 12px;margin-bottom:8px;box-shadow:0 6px 18px rgba(74,108,247,.25)}
+.install-bar.show{display:flex}
+.install-bar .ib-txt{flex:1;min-width:0;font-size:12.5px;line-height:1.35}
+.install-bar .ib-txt b{display:block;font-size:13.5px;font-weight:700;margin-bottom:1px}
+.install-bar .ib-btn{flex:0 0 auto;background:#fff;color:#3A57D4;font-size:13px;font-weight:700;
+  padding:8px 14px;border-radius:10px}
+.install-bar .ib-btn:active{background:#EAEEFF}
+.install-bar .ib-x{flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.18);
+  color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center}
+
 /* ---------- week bar ---------- */
 .weekbar{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);
   border-radius:var(--radius);padding:6px 6px;margin-bottom:8px}
@@ -178,6 +190,12 @@ header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.3px;flex:1}
   <button class="icon-btn" id="btnList" title="课程列表">☰</button>
   <button class="icon-btn" id="btnSettings" title="设置">⚙</button>
 </header>
+
+<div class="install-bar" id="installBar">
+  <div class="ib-txt" id="installText"></div>
+  <button class="ib-btn" id="btnInstall">安装</button>
+  <button class="ib-x" id="btnInstallClose" title="以后再说">✕</button>
+</div>
 
 <div class="weekbar">
   <button class="nav" id="prevWeek">‹</button>
@@ -1185,6 +1203,55 @@ function maybeSeed(){
   return true;
 }
 
+/* ============ 安装到手机（PWA） ============ */
+var deferredInstall = null;
+function isStandalone(){
+  return window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
+}
+function installDismissed(){
+  try{ return localStorage.getItem('tt.installDismissed') === '1'; }catch(e){ return false; }
+}
+function showInstallBar(){
+  var bar = $('#installBar');
+  if(!bar) return;
+  if(isStandalone() || installDismissed()) return;      // 已经是 App 或用户已选择不再提示
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPhone|iPad|iPod/i.test(ua);
+  $('#installText').innerHTML = isIOS
+    ? '<b>把课表装到桌面</b>Safari 底部分享按钮 →「添加到主屏幕」，就能全屏、离线用'
+    : '<b>把课表装成手机 App</b>桌面会有独立图标，全屏打开，断网也能用';
+  $('#btnInstall').textContent = isIOS ? '知道了' : '安装';
+  bar.classList.add('show');
+}
+function hideInstallBar(){ var b = $('#installBar'); if(b) b.classList.remove('show'); }
+function initInstall(){
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredInstall = e;
+    showInstallBar();
+  });
+  /* 已经以 App 方式运行就不显示 */
+  window.addEventListener('appinstalled', function(){ hideInstallBar(); toast('已装到桌面，从图标点开即可'); });
+  $('#btnInstall').addEventListener('click', function(){
+    var ua = navigator.userAgent || '';
+    if(/iPhone|iPad|iPod/i.test(ua)){
+      toast('点 Safari 底部的分享按钮，再选「添加到主屏幕」');
+      return;
+    }
+    if(!deferredInstall){ toast('浏览器菜单里选「添加到主屏幕 / 安装应用」'); return; }
+    deferredInstall.prompt();
+    deferredInstall.userChoice.then(function(){
+      deferredInstall = null;
+      hideInstallBar();
+    }).catch(function(){});
+  });
+  $('#btnInstallClose').addEventListener('click', function(){
+    try{ localStorage.setItem('tt.installDismissed', '1'); }catch(e){}
+    hideInstallBar();
+  });
+  showInstallBar();
+}
+
 /* ============ 底部按钮：下滑自动隐藏，不遮挡课表 ============ */
 var lastScrollY = 0;
 function initBottomBar(){
@@ -1206,6 +1273,7 @@ function initBottomBar(){
 load();
 registerSW();
 installHint();
+initInstall();
 initBottomBar();
 view.week = Math.max(1, Math.min(state.settings.totalWeeks, currentWeekNumber()));
 var seeded = maybeSeed();
